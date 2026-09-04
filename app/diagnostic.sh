@@ -1,53 +1,46 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/bash
 
-usage() {
-  echo "Usage: diagnostic <command> [args]"
-  echo "Commands:"
-  echo " system Display system information"
-  echo " network <host> Check network connectivity to host"
-  echo " disk Display disk information"
-  echo " help Show this help"
-  exit 2
-}
+if [ $# -eq 0 ]; then
+  echo "Usage: diagnostic.sh {system|disk|network|help}"
+  exit 1
+fi
 
-cmd="${1:-}"
-
-case "$cmd" in
+case "$1" in
   system)
     echo "=== System Info ==="
-    echo "Hostname: $(hostname)"
-    echo "User: $(whoami)"
-    echo "Date: $(date)"
-    echo "OS: $(grep PRETTY_NAME /etc/os-release | cut -d= -f2 | tr -d '\"')"
-    echo "Kernel: $(uname -r)"
-    echo "Uptime: $(uptime -p)"
-    echo "CPU: $(lscpu | grep 'Model name' | cut -d: -f2 | xargs)"
-    echo "Memory: $(free -h | grep Mem | awk '{print $3"/"$2}')"
-    echo "CWD: $(pwd)"
-    exit 0
-    ;;
-  network)
-    host="${2:-}"
-    if [[ -z "$host" ]]; then
-      echo "Error: host required"
-      exit 2
-    fi
-    echo "=== Network Check: $host ==="
-    getent hosts "$host" && echo "Resolved" || { echo "Failed to resolve"; exit 1; }
-    ping -c 2 "$host" >/dev/null && echo "Host is reachable" || { echo "Host unreachable"; exit 1; }
+    echo "Uptime: $(uptime)"
+    echo "CPU cores: $(nproc)"
+    echo "Memory:"
+    free -h
     exit 0
     ;;
   disk)
     echo "=== Disk Usage ==="
-    df -h /
+    df -h
     exit 0
     ;;
-  help|--help|-h)
-    usage
+  network)
+    if [ -z "$2" ]; then
+      echo "Error: network command requires a host"
+      exit 2
+    fi
+    echo "=== Network Check: $2 ==="
+    ping -c 2 "$2"
+    nslookup "$2"
+    exit 0
+    ;;
+  help)
+    echo "Usage: diagnostic <command> [args]"
+    echo "Commands:"
+    echo " system Display system information"
+    echo " disk Display disk information"
+    echo " network <host> Check network connectivity to host"
+    echo " help Show this help"
+    exit 0
     ;;
   *)
-    echo "Error: Invalid command '$cmd'"
-    usage
+    echo "Error: Unknown command '$1'"
+    echo "Usage: diagnostic.sh {system|disk|network|help}"
+    exit 1
     ;;
 esac
